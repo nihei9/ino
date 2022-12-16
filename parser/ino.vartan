@@ -1,0 +1,110 @@
+#name ino;
+
+#prec (
+	#left mul div mod
+	#left add sub
+);
+
+root
+	: decls opt_nl #ast decls
+	;
+decls
+	: decls nl decl #ast decls... decl
+	| decl
+	;
+decl
+	: const
+	| func
+	| data
+	;
+const
+	: id type_ann def expr #ast id type_ann expr
+	;
+func
+	: id params type_ann def expr #ast id params type_ann expr
+	;
+params
+	: params param #ast params... param
+	| param
+	;
+param
+	: id type_ann
+	;
+type_ann
+	: colon type_lit #ast type_lit
+	;
+type_lit
+	: id
+	;
+type_lits
+	: type_lits type_lit #ast type_lits... type_lit
+	| type_lit
+	;
+opt_type_lits
+	: type_lits
+	|
+	;
+expr
+	: call
+	| expr@lhs add expr@rhs #ast add lhs rhs
+	| expr@lhs sub expr@rhs #ast sub lhs rhs
+	| expr@lhs mul expr@rhs #ast mul lhs rhs
+	| expr@lhs div expr@rhs #ast div lhs rhs
+	| expr@lhs mod expr@rhs #ast mod lhs rhs
+	| id
+	| int
+	| string
+	;
+call
+	: id args
+	;
+args
+	: args arg #ast args... arg
+	| arg
+	;
+arg
+	: expr
+	;
+data
+	: kw_data id def conss #ast id conss
+	;
+conss
+	: conss or cons #ast conss... cons
+	| cons
+	;
+cons
+	: id opt_type_lits
+	;
+opt_nl
+	: nl
+	|
+	;
+
+ws #skip
+	: "[\u{0009}\u{0020}]+";
+nl
+	: "[\u{000A}\u{000D}]+";
+def
+	: '=';
+colon
+	: ':';
+or
+	: '|';
+add
+	: '+';
+sub
+	: '-';
+mul
+	: '*';
+div
+	: '/';
+mod
+	: '%';
+kw_data
+	: 'data';
+id
+	: "[A-Za-z][A-Za-z0-9]*";
+int
+	: "[0-9]+";
+string
+	: "\"([^\"\\]|\\[\"\\])*\"";
