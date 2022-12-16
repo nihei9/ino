@@ -1,0 +1,52 @@
+#name ino;
+
+root
+	: decls opt_nl #ast decls
+	;
+decls
+	: decls nl decl #ast decls... decl
+	| decl
+	;
+decl
+	: data
+	;
+data
+	: kw_data id opt_nl def conss semicolon #ast id conss
+	;
+conss
+	: conss or cons #ast conss... cons
+	| cons
+	;
+cons
+	: id opt_type_lits opt_nl #ast id opt_type_lits
+	;
+type_lit
+	: id
+	;
+type_lits
+	: type_lits type_lit #ast type_lits... type_lit
+	| type_lit
+	;
+opt_type_lits
+	: type_lits
+	|
+	;
+opt_nl
+	: nl
+	|
+	;
+
+ws #skip
+	: "[\u{0009}\u{0020}]+";
+nl
+	: "[\u{000A}\u{000D}]+";
+def
+	: '=';
+or
+	: '|';
+semicolon
+	: ';';
+kw_data
+	: 'data';
+id
+	: "[A-Za-z][A-Za-z0-9]*";
