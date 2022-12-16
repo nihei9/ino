@@ -1,0 +1,9 @@
+package template
+
+type {{ .DataName }} interface {
+	Maybe() *{{ .MatcherStructName }}
+}
+
+type {{ .MatcherStructName }} struct {
+	x {{ .DataName }}
+}

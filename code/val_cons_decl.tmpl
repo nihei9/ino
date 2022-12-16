@@ -1,0 +1,39 @@
+package template
+
+type {{ .TagStructName }} struct {
+	{{ genFields }}
+}
+
+func {{ .TagName }}({{ genParams }}) {{ .DataName }} {
+	return &{{ .TagStructName }}{
+		{{ genKeyValuePairs }}
+	}
+}
+
+func (x *{{ .TagStructName }}) Maybe() *{{ .MatcherStructName }} {
+	return &{{ .MatcherStructName }}{x: x}
+}
+
+func (x *{{ .MatcherStructName }}) {{ .TagName }}() *{{ .MaybeTagStructName }} {
+	if y, ok := x.x.(*{{ .TagStructName }}); ok {
+		return &{{ .MaybeTagStructName }}{x: y}
+	}
+	return &{{ .MaybeTagStructName }}{}
+}
+
+type {{ .MaybeTagStructName }} struct {
+	x *{{ .TagStructName }}
+}
+
+func (x *{{ .MaybeTagStructName }}) OK() bool {
+	return x.x != nil
+}
+
+{{ if .HasFields }}
+func (x *{{ .MaybeTagStructName }}) Fields() ({{ genFieldsMethodResults }}) {
+	if !x.OK() {
+		return
+	}
+	{{ genFieldsMethodReturn }}
+}
+{{ end }}
