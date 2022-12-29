@@ -3,11 +3,42 @@ package semantics
 import (
 	"fmt"
 	"io"
-	"os"
+	"strings"
 
 	"github.com/nihei9/ino/ir"
 	"github.com/nihei9/ino/parser"
 )
+
+type logger struct {
+	w io.Writer
+}
+
+func (l *logger) header1(msg string) {
+	if l.w == nil {
+		return
+	}
+	fence := strings.Repeat("=", len(msg))
+	fmt.Fprintln(l.w, fence)
+	fmt.Fprintln(l.w, msg)
+	fmt.Fprintln(l.w, fence)
+}
+
+func (l *logger) header2(msg string) {
+	if l.w == nil {
+		return
+	}
+	fence := strings.Repeat("-", len(msg))
+	fmt.Fprintln(l.w, fence)
+	fmt.Fprintln(l.w, msg)
+	fmt.Fprintln(l.w, fence)
+}
+
+func (l *logger) write(format string, a ...any) {
+	if l.w == nil {
+		return
+	}
+	fmt.Fprintf(l.w, format+"\n", a...)
+}
 
 type SemanticAnalyzer struct {
 	DebugOut io.Writer
@@ -15,20 +46,19 @@ type SemanticAnalyzer struct {
 }
 
 func (a *SemanticAnalyzer) Run(root *parser.Node) error {
-	if a.DebugOut != nil {
-		fmt.Fprintln(a.DebugOut, "=================")
-		fmt.Fprintln(a.DebugOut, "Semantic Analysis")
-		fmt.Fprintln(a.DebugOut, "=================")
+	l := &logger{
+		w: a.DebugOut,
 	}
+
+	l.header1("Semantic Analysis")
+
+	l.header2("Environment building")
 	eb := &environmentBuilder{}
 	err := eb.run(root)
 	if err != nil {
-		if a.DebugOut != nil {
-			fmt.Fprintln(a.DebugOut, "Environment building ... Failed")
-			fmt.Fprintln(a.DebugOut, "Errors:")
-			for _, e := range eb.errs {
-				fmt.Fprintln(a.DebugOut, e)
-			}
+		l.write("Failed")
+		for _, e := range eb.errs {
+			l.write(e.Error())
 		}
 		// FIXME
 		for _, e := range eb.errs {
@@ -36,16 +66,22 @@ func (a *SemanticAnalyzer) Run(root *parser.Node) error {
 		}
 		return err
 	}
-	if a.DebugOut != nil {
-		fmt.Fprintln(a.DebugOut, "Environment building ... Passed")
-		fmt.Fprintln(a.DebugOut, "Type Environment:")
-		eb.tyEnvRoot.print(os.Stdout)
-		fmt.Fprintln(a.DebugOut, "--------")
-		fmt.Fprintln(a.DebugOut, "Value Environment:")
-		eb.valEnvRoot.print(os.Stdout)
-		fmt.Fprintln(a.DebugOut, "--------")
+	l.write("Passed")
+	l.write("Type Environment:")
+	{
+		var b strings.Builder
+		eb.tyEnvRoot.print(&b)
+		l.write(b.String())
+	}
+	l.write("--------")
+	l.write("Value Environment:")
+	{
+		var b strings.Builder
+		eb.valEnvRoot.print(&b)
+		l.write(b.String())
 	}
 
+	l.header2("Type checking")
 	sa := &typeChecker{
 		ast:    root,
 		tyEnv:  eb.tyEnvRoot,
@@ -53,36 +89,38 @@ func (a *SemanticAnalyzer) Run(root *parser.Node) error {
 	}
 	err = sa.run()
 	if err != nil {
-		if a.DebugOut != nil {
-			fmt.Fprintln(a.DebugOut, "Type checking ... Failed")
-		}
+		l.write("Failed")
+		l.write(err.Error())
 		return err
 	}
-	if a.DebugOut != nil {
-		fmt.Fprintln(a.DebugOut, "Type checking ... Passed")
-		fmt.Fprintln(a.DebugOut, "Type Environment:")
-		eb.tyEnvRoot.print(os.Stdout)
-		fmt.Fprintln(a.DebugOut, "--------")
-		fmt.Fprintln(a.DebugOut, "Value Environment:")
-		eb.valEnvRoot.print(os.Stdout)
-		fmt.Fprintln(a.DebugOut, "--------")
+	l.write("Passed")
+	l.write("Type Environment:")
+	{
+		var b strings.Builder
+		eb.tyEnvRoot.print(&b)
+		l.write(b.String())
+	}
+	l.write("--------")
+	l.write("Value Environment:")
+	{
+		var b strings.Builder
+		eb.valEnvRoot.print(&b)
+		l.write(b.String())
 	}
 
+	l.header2("IR building")
 	irb := &irBuilder{
 		tyEnv:  &tyEnv{eb.tyEnvRoot.child},
 		valEnv: &valEnv{eb.valEnv.child},
 	}
 	ir, err := irb.run(root)
 	if err != nil {
-		if a.DebugOut != nil {
-			fmt.Fprintln(a.DebugOut, "IR generating ... Failed")
-		}
+		l.write("Failed")
+		l.write(err.Error())
 		return err
 	}
 	a.IR = ir
-	if a.DebugOut != nil {
-		fmt.Fprintln(a.DebugOut, "IR generating ... Passed")
-	}
+	l.write("Passed")
 
 	return nil
 }

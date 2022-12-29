@@ -251,7 +251,7 @@ func (t *bindingsTree[T]) print(w io.Writer) {
 	prefix := ""
 	t.walk(func(tree *bindingsTree[T]) {
 		tree.inspect(func(sym symbol, elem T, _ *bindingsTree[T]) {
-			fmt.Printf("%v%v → %v\n", prefix, sym, elem)
+			fmt.Fprintf(w, "%v%v → %v\n", prefix, sym, elem)
 		})
 		prefix = prefix + "...."
 	})

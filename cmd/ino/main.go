@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -10,62 +11,62 @@ import (
 	"github.com/nihei9/ino/semantics"
 )
 
+var (
+	packageName  string
+	debugEnabled bool
+)
+
+func init() {
+	flag.StringVar(&packageName, "package", "main", "pacakge name")
+	flag.BoolVar(&debugEnabled, "debug", false, "if true, debug logging is enabled")
+}
+
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
+	flag.Parse()
+
 	r, err := parser.Parse()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		fmt.Println("internal error:", err)
+		return 1
 	}
 	if len(r.SynErrs) > 0 {
 		for _, synErr := range r.SynErrs {
-			printSyntaxError(os.Stderr, synErr, r.Grammar)
+			fmt.Fprintln(os.Stderr, synErr)
 		}
-		os.Exit(1)
+		return 1
 	}
 
+	var debugOut io.Writer
+	if debugEnabled {
+		f, err := os.OpenFile("ino.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println(err)
+			return 1
+		}
+		debugOut = f
+	}
 	a := &semantics.SemanticAnalyzer{
-		DebugOut: os.Stderr,
+		DebugOut: debugOut,
 	}
 	err = a.Run(r.Tree)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		return 1
 	}
 
 	g := code.CodeGenerator{
-		PkgName: "main",
-		Out: os.Stdout,
+		PkgName: packageName,
+		Out:     os.Stdout,
 	}
 	err = g.Run(a.IR)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
-func printSyntaxError(w io.Writer, synErr *parser.SyntaxError, gram parser.Grammar) {
-	var msg string
-	tok := synErr.Token
-	switch {
-	case tok.EOF():
-		msg = "<eof>"
-	case tok.Invalid():
-		msg = fmt.Sprintf("'%v' (<invalid>)", string(tok.Lexeme()))
-	default:
-		if term := gram.Terminal(tok.TerminalID()); term != "" {
-			msg = fmt.Sprintf("'%v' (%v)", string(tok.Lexeme()), term)
-		} else {
-			msg = fmt.Sprintf("'%v'", string(tok.Lexeme()))
-		}
-	}
-	fmt.Fprintf(w, "%v:%v: %v: %v", synErr.Row+1, synErr.Col+1, synErr.Message, msg)
-
-	if len(synErr.ExpectedTerminals) > 0 {
-		fmt.Fprintf(w, ": expected: %v", synErr.ExpectedTerminals[0])
-		for _, t := range synErr.ExpectedTerminals[1:] {
-			fmt.Fprintf(w, ", %v", t)
-		}
+		return 1
 	}
 
-	fmt.Fprintf(w, "\n")
+	return 0
 }
