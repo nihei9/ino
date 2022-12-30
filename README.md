@@ -30,11 +30,13 @@ You can also use `go:generate` directive.
 
 ## Ino syntax and available Go APIs
 
-### `data` type
+### `data`
+
+`data` keyword allows you to generate a [sum type](https://en.wikipedia.org/wiki/Tagged_union).
 
 #### Example
 
-Ino:
+##### In Ino
 
 ```
 data Pen
@@ -43,7 +45,7 @@ data Pen
     ;
 ```
 
-Go:
+##### Go APIs Generated
 
 The following three public APIs are available.
 
