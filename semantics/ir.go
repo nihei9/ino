@@ -49,11 +49,17 @@ func (b *irBuilder) buildDecl(node *parser.Node) ([]ir.Decl, error) {
 
 func (b *irBuilder) buildData(node *parser.Node) ([]ir.Decl, error) {
 	dataName := node.Children[0].Text
-	conss := node.Children[1]
+	tyVars := node.Children[1]
+	conss := node.Children[2]
 	decls := make([]ir.Decl, 0, 1+len(conss.Children))
 	decls = append(decls, &ir.DataDecl{
-		Name: dataName,
+		Name:         dataName,
+		TypeVarCount: len(tyVars.Children),
 	})
+	tyVar2Num := map[symbol]int{}
+	for i, v := range tyVars.Children {
+		tyVar2Num[symbol(v.Children[0].Text)] = i + 1
+	}
 	for _, cons := range conss.Children {
 		consName := cons.Children[0].Text
 		ee, ok := b.valEnv.lookup(symbol(consName))
@@ -66,22 +72,23 @@ func (b *irBuilder) buildData(node *parser.Node) ([]ir.Decl, error) {
 		}
 		params := make([]ir.Type, len(consTy.params))
 		for i, t := range consTy.params {
-			param, err := genType(t)
+			param, err := genType(t, tyVar2Num)
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate a type of a value constructor of %v: %w", dataName, err)
 			}
 			params[i] = param
 		}
 		decls = append(decls, &ir.ValConsDecl{
-			Name:   consName,
-			TyName: dataName,
-			Params: params,
+			Name:         consName,
+			TyName:       dataName,
+			Params:       params,
+			TypeVarCount: len(tyVars.Children),
 		})
 	}
 	return decls, nil
 }
 
-func genType(ty declType) (ir.Type, error) {
+func genType(ty declType, tyVar2Num map[symbol]int) (ir.Type, error) {
 	switch t := ty.(type) {
 	case basicType:
 		return &ir.BasicType{
@@ -90,6 +97,10 @@ func genType(ty declType) (ir.Type, error) {
 	case *dataType:
 		return &ir.NamedType{
 			Name: string(t.name),
+		}, nil
+	case *typeVar:
+		return &ir.TypeVar{
+			Num: tyVar2Num[t.name],
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid type: %T", ty)

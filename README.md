@@ -34,7 +34,7 @@ You can also use `go:generate` directive.
 
 `data` keyword allows you to generate a [sum type](https://en.wikipedia.org/wiki/Tagged_union).
 
-#### Example
+#### Example: Basic usage
 
 ##### In Ino
 
@@ -45,7 +45,7 @@ data Pen
     ;
 ```
 
-##### Go APIs Generated
+##### Go APIs generated
 
 The following three public APIs are available.
 
@@ -68,3 +68,34 @@ ok = f.Maybe().BallpointPen().OK() // false
 ```
 
 :eyes: `Fields` method isn't available in `FountainPen` because it has no fields.
+
+#### Example: Generics
+
+You can define polymorphic types using type variables.
+
+##### In Ino
+
+Type variables can follow a data type name.
+
+```
+data Option a
+    = None
+    | Some a
+    ;
+```
+
+##### Go APIs generatd
+
+* `Option[T1 any]` interface
+* `None` function that returns a `Option` object
+* `Some[T1 any]` function that returns a `Option` object
+
+```go
+s1 := Some(100)           // Option[int]
+n := None[int]            // Option[int]
+s2 := Some(Some("Hello")) // Option[Option[string]]
+
+num, ok := s1.Maybe().Some().Fields()  // 100, true
+opt, ok := s2.Maybe().Some().Fields()  // Some("Hello"), true
+str, ok := opt.Maybe().Some().Fields() // "Hello", true
+```

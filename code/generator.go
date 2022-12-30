@@ -8,6 +8,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -66,7 +67,35 @@ func genDecl(decl ir.Decl) ([]ast.Decl, error) {
 }
 
 func genDataDecl(d *ir.DataDecl) ([]ast.Decl, error) {
-	tmpl, err := template.New("dataDeclTmpl").Parse(dataDeclTmpl)
+	fm := template.FuncMap{
+		// [T1 any, T2 any, ...]
+		"genTyVarDecls": func() (string, error) {
+			if d.TypeVarCount == 0 {
+				return "", nil
+			}
+			var b strings.Builder
+			fmt.Fprintf(&b, "[T1 any")
+			for i := 2; i <= d.TypeVarCount; i++ {
+				fmt.Fprintf(&b, ", T%v any", i)
+			}
+			fmt.Fprintf(&b, "]")
+			return b.String(), nil
+		},
+		// [T1, T2, ...]
+		"genTyVarNames": func() (string, error) {
+			if d.TypeVarCount == 0 {
+				return "", nil
+			}
+			var b strings.Builder
+			fmt.Fprintf(&b, "[T1")
+			for i := 2; i <= d.TypeVarCount; i++ {
+				fmt.Fprintf(&b, ", T%v", i)
+			}
+			fmt.Fprintf(&b, "]")
+			return b.String(), nil
+		},
+	}
+	tmpl, err := template.New("dataDeclTmpl").Funcs(fm).Parse(dataDeclTmpl)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +118,32 @@ func genDataDecl(d *ir.DataDecl) ([]ast.Decl, error) {
 
 func genValConsDecl(d *ir.ValConsDecl) ([]ast.Decl, error) {
 	fm := template.FuncMap{
+		// [T1 any, T2 any, ...]
+		"genTyVarDecls": func() (string, error) {
+			if d.TypeVarCount == 0 {
+				return "", nil
+			}
+			var b strings.Builder
+			fmt.Fprintf(&b, "[T1 any")
+			for i := 2; i <= d.TypeVarCount; i++ {
+				fmt.Fprintf(&b, ", T%v any", i)
+			}
+			fmt.Fprintf(&b, "]")
+			return b.String(), nil
+		},
+		// [T1, T2, ...]
+		"genTyVarNames": func() (string, error) {
+			if d.TypeVarCount == 0 {
+				return "", nil
+			}
+			var b strings.Builder
+			fmt.Fprintf(&b, "[T1")
+			for i := 2; i <= d.TypeVarCount; i++ {
+				fmt.Fprintf(&b, ", T%v", i)
+			}
+			fmt.Fprintf(&b, "]")
+			return b.String(), nil
+		},
 		"genFields": func() (string, error) {
 			var b strings.Builder
 			for i, p := range d.Params {
@@ -123,7 +178,7 @@ func genValConsDecl(d *ir.ValConsDecl) ([]ast.Decl, error) {
 		"genKeyValuePairs": func() (string, error) {
 			var b strings.Builder
 			for i := 1; i <= len(d.Params); i++ {
-				fmt.Fprintf(&b, "p%v: p%v,", i, i)
+				fmt.Fprintf(&b, "p%v: p%v,\n", i, i)
 			}
 			return b.String(), nil
 		},
@@ -193,6 +248,8 @@ func genType(ty ir.Type) (ast.Expr, error) {
 		return ast.NewIdent(t.Name), nil
 	case *ir.NamedType:
 		return ast.NewIdent(t.Name), nil
+	case *ir.TypeVar:
+		return ast.NewIdent("T" + strconv.Itoa(t.Num)), nil
 	}
 	return nil, fmt.Errorf("invalid type: %T", ty)
 }

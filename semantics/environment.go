@@ -21,6 +21,7 @@ var (
 	_ declType = basicType("")
 	_ declType = &funcType{}
 	_ declType = &dataType{}
+	_ declType = &typeVar{}
 	_ declType = &unresolvedType{}
 )
 
@@ -52,6 +53,7 @@ const (
 )
 
 type funcType struct {
+	tyVars []symbol
 	params []declType
 	result declType
 }
@@ -79,6 +81,7 @@ func (t *funcType) unresolved() bool {
 
 func (t *funcType) resolve(tyEnv *tyEnv) (declType, error) {
 	fTy := &funcType{
+		tyVars: t.tyVars,
 		params: make([]declType, len(t.params)),
 	}
 	for i, pTy := range t.params {
@@ -121,11 +124,17 @@ func (t *funcType) equals(u declType) bool {
 }
 
 type dataType struct {
-	name symbol
+	name   symbol
+	tyVars []symbol
 }
 
 func (t *dataType) String() string {
-	return string(t.name)
+	var b strings.Builder
+	fmt.Fprintf(&b, "%v", t.name)
+	for _, v := range t.tyVars {
+		fmt.Fprintf(&b, " %v", v)
+	}
+	return b.String()
 }
 
 func (t *dataType) unresolved() bool {
@@ -138,6 +147,30 @@ func (t *dataType) resolve(_ *tyEnv) (declType, error) {
 
 func (t *dataType) equals(u declType) bool {
 	v, ok := u.(*dataType)
+	if !ok {
+		return false
+	}
+	return t.name == v.name
+}
+
+type typeVar struct {
+	name symbol
+}
+
+func (t *typeVar) String() string {
+	return string(t.name)
+}
+
+func (t *typeVar) unresolved() bool {
+	return false
+}
+
+func (t *typeVar) resolve(tyEnv *tyEnv) (declType, error) {
+	return t, nil
+}
+
+func (t *typeVar) equals(u declType) bool {
+	v, ok := u.(*typeVar)
 	if !ok {
 		return false
 	}
@@ -394,14 +427,19 @@ func (b *environmentBuilder) buildDecl(node *parser.Node) {
 }
 
 func (b *environmentBuilder) buildData(node *parser.Node) {
+	tyVars := make([]symbol, len(node.Children[1].Children))
+	for _, tv := range node.Children[1].Children {
+		tyVars = append(tyVars, symbol(tv.Children[0].Text))
+	}
 	resultTy := &dataType{
-		name: symbol(node.Children[0].Text),
+		name:   symbol(node.Children[0].Text),
+		tyVars: tyVars,
 	}
 	ok := b.tyEnv.bind(resultTy.name, resultTy)
 	if !ok {
 		b.error("duplicated symbol: %v", resultTy.name)
 	}
-	for _, cons := range node.Children[1].Children {
+	for _, cons := range node.Children[2].Children {
 		var paramTys []declType
 		{
 			optTyLits := cons.Children[1]
@@ -409,14 +447,28 @@ func (b *environmentBuilder) buildData(node *parser.Node) {
 				tyLits := optTyLits.Children[0]
 				paramTys = make([]declType, len(tyLits.Children))
 				for i, tyLit := range tyLits.Children {
-					tySym := symbol(tyLit.Children[0].Text)
-					paramTys[i] = b.tyEnv.lookupTentatively(tySym)
+					var ty declType
+					{
+						tySym := symbol(tyLit.Children[0].Text)
+						for _, v := range tyVars {
+							if tySym == v {
+								ty = &typeVar{
+									name: tySym,
+								}
+							}
+						}
+						if ty == nil {
+							ty = b.tyEnv.lookupTentatively(tySym)
+						}
+					}
+					paramTys[i] = ty
 				}
 			}
 		}
 		tagName := cons.Children[0].Text
 		ok := b.valEnv.bind(symbol(tagName), &valEnvEntry{
 			ty: &funcType{
+				tyVars: tyVars,
 				params: paramTys,
 				result: resultTy,
 			},

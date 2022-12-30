@@ -6,6 +6,7 @@ type Type interface {
 var (
 	_ Type = &BasicType{}
 	_ Type = &NamedType{}
+	_ Type = &TypeVar{}
 )
 
 type BasicType struct {
@@ -14,6 +15,10 @@ type BasicType struct {
 
 type NamedType struct {
 	Name string
+}
+
+type TypeVar struct {
+	Num int
 }
 
 type Decl interface {
@@ -25,13 +30,15 @@ var (
 )
 
 type DataDecl struct {
-	Name string
+	Name         string
+	TypeVarCount int
 }
 
 type ValConsDecl struct {
-	Name   string
-	TyName string
-	Params []Type
+	Name         string
+	TyName       string
+	Params       []Type
+	TypeVarCount int
 }
 
 type File struct {

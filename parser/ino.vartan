@@ -11,7 +11,15 @@ decl
 	: data
 	;
 data
-	: kw_data id opt_nl def conss semicolon #ast id conss
+	: kw_data id ty_vars opt_nl def conss semicolon #ast id ty_vars conss
+	;
+ty_vars
+	: ty_vars ty_var #ast ty_vars... ty_var
+	| ty_var
+	|
+	;
+ty_var
+	: id
 	;
 conss
 	: conss or cons #ast conss... cons
