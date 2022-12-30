@@ -65,4 +65,4 @@ ok = f.Maybe().FountainPen().OK()  // true
 ok = f.Maybe().BallpointPen().OK() // false
 ```
 
-:warn: `Fields` method isn't available in `FountainPen` because it has no fields.
+:eyes: `Fields` method isn't available in `FountainPen` because it has no fields.
