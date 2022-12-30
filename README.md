@@ -48,15 +48,21 @@ Go:
 The following three public APIs are available.
 
 * `Pen` interface
-* `BallpointPen` function that returns a Pen object
-* `FountainPen` function that returns a Pen object
+* `BallpointPen` function (constructor) that returns a `Pen` object
+* `FountainPen` function (constructor) that returns a `Pen` object
+
+Now, you can check that a value of `Pen` is which variant using `OK` method and can retrieve fields using `Fields` method.
 
 ```go
-bB := BallpointPen("black")
-ok := bB.Maybe().BallpointPen().OK() // true
-ok = bB.Maybe().FountainPen().OK()   // false
+bB := BallpointPen("Black")
+ok := bB.Maybe().BallpointPen().OK()            // true
+ok = bB.Maybe().FountainPen().OK()              // false
+color, ok := bB.Maybe().BallpointPen().Fields() // "Black", true
+color, ok = bB.Maybe().FountainPen().Fields()   // "", false
 
 f := FountainPen()
 ok = f.Maybe().FountainPen().OK()  // true
 ok = f.Maybe().BallpointPen().OK() // false
 ```
+
+:warn: `Fields` method isn't available in `FountainPen` because it has no fields.
