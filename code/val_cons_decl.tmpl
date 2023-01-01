@@ -1,39 +1,39 @@
 package template
 
-type {{ .TagStructName }}{{ genTyVarDecls }} struct {
-	{{ genFields }}
+type {{ .TagStructName }}{{ .TyVarsWithType }} struct {
+	{{ .Fields }}
 }
 
-func {{ .TagName }}{{ genTyVarDecls }}({{ genParams }}) {{ .DataName }}{{ genTyVarNames }} {
-	return &{{ .TagStructName }}{{ genTyVarNames }}{
-		{{ genKeyValuePairs }}
+func {{ .TagName }}{{ .TyVarsWithType }}({{ .Params }}) {{ .DataName }}{{ .TyVars }} {
+	return &{{ .TagStructName }}{{ .TyVars }}{
+		{{ .KeyValuePairs }}
 	}
 }
 
-func (x *{{ .TagStructName }}{{ genTyVarNames }}) Maybe() *{{ .MatcherStructName }}{{ genTyVarNames }} {
-	return &{{ .MatcherStructName }}{{ genTyVarNames }}{x: x}
+func (x *{{ .TagStructName }}{{ .TyVars }}) Maybe() *{{ .MatcherStructName }}{{ .TyVars }} {
+	return &{{ .MatcherStructName }}{{ .TyVars }}{x: x}
 }
 
-func (x *{{ .MatcherStructName }}{{ genTyVarNames }}) {{ .TagName }}() *{{ .MaybeTagStructName }}{{ genTyVarNames }} {
-	if y, ok := x.x.(*{{ .TagStructName }}{{ genTyVarNames }}); ok {
-		return &{{ .MaybeTagStructName }}{{ genTyVarNames }}{x: y}
+func (x *{{ .MatcherStructName }}{{ .TyVars }}) {{ .TagName }}() *{{ .MaybeTagStructName }}{{ .TyVars }} {
+	if y, ok := x.x.(*{{ .TagStructName }}{{ .TyVars }}); ok {
+		return &{{ .MaybeTagStructName }}{{ .TyVars }}{x: y}
 	}
-	return &{{ .MaybeTagStructName }}{{ genTyVarNames }}{}
+	return &{{ .MaybeTagStructName }}{{ .TyVars }}{}
 }
 
-type {{ .MaybeTagStructName }}{{ genTyVarDecls }} struct {
-	x *{{ .TagStructName }}{{ genTyVarNames }}
+type {{ .MaybeTagStructName }}{{ .TyVarsWithType }} struct {
+	x *{{ .TagStructName }}{{ .TyVars }}
 }
 
-func (x *{{ .MaybeTagStructName }}{{ genTyVarNames }}) OK() bool {
+func (x *{{ .MaybeTagStructName }}{{ .TyVars }}) OK() bool {
 	return x.x != nil
 }
 
 {{ if .HasFields }}
-func (x *{{ .MaybeTagStructName }}{{ genTyVarNames }}) Fields() ({{ genFieldsMethodResults }}) {
+func (x *{{ .MaybeTagStructName }}{{ .TyVars }}) Fields() ({{ .Params }}, ok bool) {
 	if !x.OK() {
 		return
 	}
-	{{ genFieldsMethodReturn }}
+	return {{ .FieldsMethodReturn }}, true
 }
 {{ end }}

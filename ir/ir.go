@@ -31,19 +31,17 @@ type Decl interface {
 
 var (
 	_ Decl = &DataDecl{}
-	_ Decl = &ValConsDecl{}
 )
 
 type DataDecl struct {
 	Name         string
 	TypeVarCount int
+	Conss        []*ValCons
 }
 
-type ValConsDecl struct {
-	Name         string
-	TyName       string
-	Params       []Type
-	TypeVarCount int
+type ValCons struct {
+	Name   string
+	Params []Type
 }
 
 type File struct {

@@ -1,9 +1,9 @@
 package template
 
-type {{ .DataName }}{{ genTyVarDecls }} interface {
-	Maybe() *{{ .MatcherStructName }}{{ genTyVarNames }}
+type {{ .DataName }}{{ .TyVarsWithType }} interface {
+	Maybe() *{{ .MatcherStructName }}{{ .TyVars }}
 }
 
-type {{ .MatcherStructName }}{{ genTyVarDecls }} struct {
-	x {{ .DataName }}{{ genTyVarNames }}
+type {{ .MatcherStructName }}{{ .TyVarsWithType }} struct {
+	x {{ .DataName }}{{ .TyVars }}
 }
