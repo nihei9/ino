@@ -95,17 +95,25 @@ func genType(ty declType, tyVar2Num map[symbol]int) (ir.Type, error) {
 			Name: t.String(),
 		}, nil
 	case *dataType:
-		tyVars := make([]int, len(t.tyVars))
-		for i, v := range t.tyVars {
-			num, ok := tyVar2Num[v]
-			if !ok {
-				return nil, fmt.Errorf("type variable not found: %v", v)
-			}
-			tyVars[i] = num
-		}
 		return &ir.NamedType{
-			Name:     string(t.name),
-			TypeVars: tyVars,
+			Name: string(t.name),
+		}, nil
+	case *concreteType:
+		abTy, err := genType(t.abstractTy, tyVar2Num)
+		if err != nil {
+			return nil, err
+		}
+		args := make([]ir.Type, len(t.args))
+		for i, p := range t.args {
+			pTy, err := genType(p, tyVar2Num)
+			if err != nil {
+				return nil, err
+			}
+			args[i] = pTy
+		}
+		return &ir.ConcreteType{
+			AbstractTy: abTy,
+			Args:       args,
 		}, nil
 	case *typeVar:
 		return &ir.TypeVar{

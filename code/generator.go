@@ -247,15 +247,27 @@ func genType(ty ir.Type) (string, error) {
 	case *ir.BasicType:
 		return t.Name, nil
 	case *ir.NamedType:
-		if len(t.TypeVars) == 0 {
-			return t.Name, nil
-		}
+		return t.Name, nil
+	case *ir.ConcreteType:
 		var b strings.Builder
-		fmt.Fprintf(&b, "%v[T%v", t.Name, t.TypeVars[0])
-		for _, v := range t.TypeVars[1:] {
-			fmt.Fprintf(&b, ", T%v", v)
+		abTy, err := genType(t.AbstractTy)
+		if err != nil {
+			return "", err
 		}
-		fmt.Fprintf(&b, "]")
+		fmt.Fprintf(&b, "%v", abTy)
+		argTy, err := genType(t.Args[0])
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&b, "[%v", argTy)
+		for _, arg := range t.Args[1:] {
+			argTy, err := genType(arg)
+			if err != nil {
+				return "", err
+			}
+			fmt.Fprintf(&b, ", %v", argTy)
+		}
+		fmt.Fprint(&b, "]")
 		return b.String(), nil
 	case *ir.TypeVar:
 		return "T" + strconv.Itoa(t.Num), nil

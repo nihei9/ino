@@ -10,8 +10,15 @@ import (
 
 type symbol string
 
+type abstractType interface {
+	tyParams() []symbol
+}
+
+var _ abstractType = &dataType{}
+
 type declType interface {
 	fmt.Stringer
+	abstract() (abstractType, bool)
 	unresolved() bool
 	resolve(*tyEnv) (declType, error)
 	equals(declType) bool
@@ -21,6 +28,7 @@ var (
 	_ declType = basicType("")
 	_ declType = &funcType{}
 	_ declType = &dataType{}
+	_ declType = &concreteType{}
 	_ declType = &typeVar{}
 	_ declType = &unresolvedType{}
 )
@@ -29,6 +37,10 @@ type basicType string
 
 func (t basicType) String() string {
 	return string(t)
+}
+
+func (t basicType) abstract() (abstractType, bool) {
+	return nil, false
 }
 
 func (t basicType) unresolved() bool {
@@ -60,11 +72,19 @@ type funcType struct {
 
 func (t *funcType) String() string {
 	var b strings.Builder
-	for _, p := range t.params {
-		fmt.Fprintf(&b, "%v ", p)
+	if len(t.params) > 0 {
+		for _, p := range t.params {
+			fmt.Fprintf(&b, "%v ", p)
+		}
+	} else {
+		fmt.Fprint(&b, "() ")
 	}
 	fmt.Fprintf(&b, "-> %v", t.result)
 	return b.String()
+}
+
+func (t *funcType) abstract() (abstractType, bool) {
+	return nil, false
 }
 
 func (t *funcType) unresolved() bool {
@@ -141,6 +161,13 @@ func (t *dataType) String() string {
 	return b.String()
 }
 
+func (t *dataType) abstract() (abstractType, bool) {
+	if len(t.tyVars) == 0 {
+		return nil, false
+	}
+	return t, true
+}
+
 func (t *dataType) unresolved() bool {
 	return false
 }
@@ -157,12 +184,94 @@ func (t *dataType) equals(u declType) bool {
 	return t.name == v.name
 }
 
+func (t *dataType) tyParams() []symbol {
+	return t.tyVars
+}
+
+type concreteType struct {
+	abstractTy declType
+	args       []declType
+}
+
+func (t *concreteType) String() string {
+	var b strings.Builder
+	fmt.Fprint(&b, t.abstractTy)
+	fmt.Fprintf(&b, "<%v", t.args[0])
+	for _, p := range t.args[1:] {
+		fmt.Fprintf(&b, " %v", p)
+	}
+	fmt.Fprint(&b, ">")
+	return b.String()
+}
+
+func (t *concreteType) abstract() (abstractType, bool) {
+	return nil, false
+}
+
+func (t *concreteType) unresolved() bool {
+	if t.abstractTy.unresolved() {
+		return true
+	}
+	for _, p := range t.args {
+		if p.unresolved() {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *concreteType) resolve(tyEnv *tyEnv) (declType, error) {
+	cTy := &concreteType{
+		abstractTy: t.abstractTy,
+		args:       make([]declType, len(t.args)),
+	}
+	if t.abstractTy.unresolved() {
+		ty, err := t.abstractTy.resolve(tyEnv)
+		if err != nil {
+			return nil, err
+		}
+		cTy.abstractTy = ty
+	}
+	for i, p := range t.args {
+		if p.unresolved() {
+			ty, err := p.resolve(tyEnv)
+			if err != nil {
+				return nil, err
+			}
+			cTy.args[i] = ty
+		} else {
+			cTy.args[i] = p
+		}
+	}
+	return cTy, nil
+}
+
+func (t *concreteType) equals(u declType) bool {
+	v, ok := u.(*concreteType)
+	if !ok {
+		return false
+	}
+	if !t.abstractTy.equals(v.abstractTy) {
+		return false
+	}
+	for i, p := range t.args {
+		if !p.equals(v.args[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type typeVar struct {
 	name symbol
 }
 
 func (t *typeVar) String() string {
 	return string(t.name)
+}
+
+func (t *typeVar) abstract() (abstractType, bool) {
+	return nil, false
 }
 
 func (t *typeVar) unresolved() bool {
@@ -188,6 +297,10 @@ type unresolvedType struct {
 
 func (t *unresolvedType) String() string {
 	return "?<" + string(t.name) + ">"
+}
+
+func (t *unresolvedType) abstract() (abstractType, bool) {
+	return nil, false
 }
 
 func (t *unresolvedType) unresolved() bool {
@@ -392,7 +505,6 @@ func (b *environmentBuilder) leave() {
 func (b *environmentBuilder) error(format string, a ...any) {
 	err := newContinuableError(fmt.Errorf(format, a...))
 	b.errs = append(b.errs, err)
-	panic(err)
 }
 
 func (b *environmentBuilder) fatal(format string, a ...any) {
@@ -465,7 +577,12 @@ func (b *environmentBuilder) buildData(node *parser.Node) {
 							ty = b.tyEnv.lookupTentatively(tySym)
 						}
 					}
-					paramTys[i] = ty
+					cTy, err := concretize(ty, tyLit, b.tyEnv)
+					if err != nil {
+						b.error(err.Error())
+						return
+					}
+					paramTys[i] = cTy
 				}
 			}
 		}
@@ -481,4 +598,41 @@ func (b *environmentBuilder) buildData(node *parser.Node) {
 			b.error("duplicated symbol: %v", tagName)
 		}
 	}
+}
+
+// FIXME: Move the code for type checking to `type_checker.go`.
+func concretize(ty declType, tyLit *parser.Node, te *tyEnv) (declType, error) {
+	abTy, ok := ty.abstract()
+	if !ok {
+		return ty, nil
+	}
+	tyParams := abTy.tyParams()
+	// Check whether ty_lit has ty_vars
+	if len(tyLit.Children) < 2 {
+		return nil, fmt.Errorf("failed to concretize: want %v arguments but got no arguments", len(tyParams))
+	}
+	tyArgs := tyLit.Children[1]
+	if len(tyParams) != len(tyArgs.Children) {
+		return nil, fmt.Errorf("failed to concretize: want %v arguments but got %v arguments", len(tyParams), len(tyArgs.Children))
+	}
+	args := make([]declType, len(tyArgs.Children))
+	for i, tyArg := range tyArgs.Children {
+		argSym := symbol(tyArg.Children[0].Text)
+		var t declType
+		for _, paramSym := range tyParams {
+			if paramSym == argSym {
+				t = &typeVar{
+					name: argSym,
+				}
+			}
+		}
+		if t == nil {
+			t = te.lookupTentatively(argSym)
+		}
+		args[i] = t
+	}
+	return &concreteType{
+		abstractTy: ty,
+		args:       args,
+	}, nil
 }

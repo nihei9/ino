@@ -14,8 +14,12 @@ type BasicType struct {
 }
 
 type NamedType struct {
-	Name     string
-	TypeVars []int
+	Name string
+}
+
+type ConcreteType struct {
+	AbstractTy Type
+	Args       []Type
 }
 
 type TypeVar struct {
