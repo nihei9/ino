@@ -129,11 +129,15 @@ type dataType struct {
 }
 
 func (t *dataType) String() string {
+	if len(t.tyVars) == 0 {
+		return string(t.name)
+	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%v", t.name)
+	fmt.Fprintf(&b, "(%v", t.name)
 	for _, v := range t.tyVars {
 		fmt.Fprintf(&b, " %v", v)
 	}
+	fmt.Fprintf(&b, ")")
 	return b.String()
 }
 
@@ -428,8 +432,8 @@ func (b *environmentBuilder) buildDecl(node *parser.Node) {
 
 func (b *environmentBuilder) buildData(node *parser.Node) {
 	tyVars := make([]symbol, len(node.Children[1].Children))
-	for _, tv := range node.Children[1].Children {
-		tyVars = append(tyVars, symbol(tv.Children[0].Text))
+	for i, tv := range node.Children[1].Children {
+		tyVars[i] = symbol(tv.Children[0].Text)
 	}
 	resultTy := &dataType{
 		name:   symbol(node.Children[0].Text),

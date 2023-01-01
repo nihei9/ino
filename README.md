@@ -69,13 +69,13 @@ ok = f.Maybe().BallpointPen().OK() // false
 
 :eyes: `Fields` method isn't available in `FountainPen` because it has no fields.
 
-#### Example: Generics
+#### Example: Generics #1
 
 You can define polymorphic types using type variables.
 
 ##### In Ino
 
-Type variables can follow a data type name.
+Type variables can follow a data type name. In this example, `a` is a type variable.
 
 ```
 data Option a
@@ -98,4 +98,15 @@ s2 := Some(Some("Hello")) // Option[Option[string]]
 num, ok := s1.Maybe().Some().Fields()  // 100, true
 opt, ok := s2.Maybe().Some().Fields()  // Some("Hello"), true
 str, ok := opt.Maybe().Some().Fields() // "Hello", true
+```
+
+#### Example: Generics #2
+
+Polymorphic-type literals must be enclosed in parentheses.
+
+```
+data List a
+    = Nil
+    | Cons a (List a)
+    ;
 ```

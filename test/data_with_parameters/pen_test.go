@@ -1,4 +1,4 @@
-//go:generate ino --package test
+//go:generate ino --package test --debug
 package test
 
 import "testing"

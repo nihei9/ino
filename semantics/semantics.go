@@ -53,6 +53,13 @@ func (a *SemanticAnalyzer) Run(root *parser.Node) error {
 
 	l.header1("Semantic Analysis")
 
+	l.header2("AST")
+	{
+		var b strings.Builder
+		parser.PrintTree(&b, root)
+		l.write(b.String())
+	}
+
 	l.header2("Environment building")
 	eb := &environmentBuilder{}
 	err := eb.run(root)

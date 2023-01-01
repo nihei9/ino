@@ -30,6 +30,7 @@ cons
 	;
 type_lit
 	: id
+	| l_paren id ty_vars r_paren #ast id ty_vars
 	;
 type_lits
 	: type_lits type_lit #ast type_lits... type_lit
@@ -54,6 +55,10 @@ or
 	: '|';
 semicolon
 	: ';';
+l_paren
+	: '(';
+r_paren
+	: ')';
 kw_data
 	: 'data';
 id

@@ -74,7 +74,7 @@ func (b *irBuilder) buildData(node *parser.Node) ([]ir.Decl, error) {
 		for i, t := range consTy.params {
 			param, err := genType(t, tyVar2Num)
 			if err != nil {
-				return nil, fmt.Errorf("failed to generate a type of a value constructor of %v: %w", dataName, err)
+				return nil, fmt.Errorf("failed to generate a type of a value constructor %v of %v: %w", consName, dataName, err)
 			}
 			params[i] = param
 		}
@@ -95,8 +95,17 @@ func genType(ty declType, tyVar2Num map[symbol]int) (ir.Type, error) {
 			Name: t.String(),
 		}, nil
 	case *dataType:
+		tyVars := make([]int, len(t.tyVars))
+		for i, v := range t.tyVars {
+			num, ok := tyVar2Num[v]
+			if !ok {
+				return nil, fmt.Errorf("type variable not found: %v", v)
+			}
+			tyVars[i] = num
+		}
 		return &ir.NamedType{
-			Name: string(t.name),
+			Name:     string(t.name),
+			TypeVars: tyVars,
 		}, nil
 	case *typeVar:
 		return &ir.TypeVar{

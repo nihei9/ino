@@ -363,8 +363,10 @@ const (
 	KindIDDef       KindID = 3
 	KindIDOr        KindID = 4
 	KindIDSemicolon KindID = 5
-	KindIDKwData    KindID = 6
-	KindIDId        KindID = 7
+	KindIDLParen    KindID = 6
+	KindIDRParen    KindID = 7
+	KindIDKwData    KindID = 8
+	KindIDId        KindID = 9
 )
 
 const (
@@ -374,6 +376,8 @@ const (
 	KindNameDef       = "def"
 	KindNameOr        = "or"
 	KindNameSemicolon = "semicolon"
+	KindNameLParen    = "l_paren"
+	KindNameRParen    = "r_paren"
 	KindNameKwData    = "kw_data"
 	KindNameId        = "id"
 )
@@ -393,6 +397,10 @@ func KindIDToName(id KindID) string {
 		return KindNameOr
 	case KindIDSemicolon:
 		return KindNameSemicolon
+	case KindIDLParen:
+		return KindNameLParen
+	case KindIDRParen:
+		return KindNameRParen
 	case KindIDKwData:
 		return KindNameKwData
 	case KindIDId:
@@ -426,13 +434,13 @@ func NewLexSpec() *lexSpec {
 		pop: [][]bool{
 			nil,
 			{
-				false, false, false, false, false, false, false, false,
+				false, false, false, false, false, false, false, false, false, false,
 			},
 		},
 		push: [][]ModeID{
 			nil,
 			{
-				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			},
 		},
 		modeNames: []string{
@@ -446,7 +454,7 @@ func NewLexSpec() *lexSpec {
 		acceptances: [][]ModeKindID{
 			nil,
 			{
-				0, 0, 1, 2, 7, 7, 7, 6, 7, 3, 4, 5,
+				0, 0, 1, 2, 9, 9, 9, 8, 9, 3, 4, 5, 6, 7,
 			},
 		},
 		kindIDs: [][]KindID{
@@ -458,6 +466,8 @@ func NewLexSpec() *lexSpec {
 				KindIDDef,
 				KindIDOr,
 				KindIDSemicolon,
+				KindIDLParen,
+				KindIDRParen,
 				KindIDKwData,
 				KindIDId,
 			},
@@ -469,6 +479,8 @@ func NewLexSpec() *lexSpec {
 			KindNameDef,
 			KindNameOr,
 			KindNameSemicolon,
+			KindNameLParen,
+			KindNameRParen,
 			KindNameKwData,
 			KindNameId,
 		},
@@ -480,7 +492,7 @@ func NewLexSpec() *lexSpec {
 		rowNums: [][]int{
 			nil,
 			{
-				0, 1, 2, 3, 4, 5, 6, 7, 7, 0, 0, 0,
+				0, 1, 2, 3, 4, 5, 6, 7, 7, 0, 0, 0, 0, 0,
 			},
 		},
 		rowDisplacements: [][]int{
@@ -510,8 +522,8 @@ func NewLexSpec() *lexSpec {
 				7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, -1, -1, -1, -1,
 				-1, -1, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
 				7, 7, 7, 7, 7, 7, 7, 7, 1, 1, 2, -1, 1, 3, -1, -1, 3, -1, -1, -1,
-				-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, -1, 2, -1, -1, -1, -1, -1, -1,
-				-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, -1,
+				-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, -1, 2, -1, -1, -1, -1, -1, 1,
+				1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, -1,
 				1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 				1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1,
 				1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -545,8 +557,8 @@ func NewLexSpec() *lexSpec {
 				8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0,
 				0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
 				8, 8, 8, 8, 8, 8, 8, 8, 2, 3, 2, 0, 3, 3, 0, 0, 3, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 12,
+				13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0,
 				9, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
 				8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0, 0, 0, 8, 8, 8, 4,
 				8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,

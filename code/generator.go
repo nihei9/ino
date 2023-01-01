@@ -242,14 +242,23 @@ func genValConsDecl(d *ir.ValConsDecl) ([]ast.Decl, error) {
 	return f.Decls, nil
 }
 
-func genType(ty ir.Type) (ast.Expr, error) {
+func genType(ty ir.Type) (string, error) {
 	switch t := ty.(type) {
 	case *ir.BasicType:
-		return ast.NewIdent(t.Name), nil
+		return t.Name, nil
 	case *ir.NamedType:
-		return ast.NewIdent(t.Name), nil
+		if len(t.TypeVars) == 0 {
+			return t.Name, nil
+		}
+		var b strings.Builder
+		fmt.Fprintf(&b, "%v[T%v", t.Name, t.TypeVars[0])
+		for _, v := range t.TypeVars[1:] {
+			fmt.Fprintf(&b, ", T%v", v)
+		}
+		fmt.Fprintf(&b, "]")
+		return b.String(), nil
 	case *ir.TypeVar:
-		return ast.NewIdent("T" + strconv.Itoa(t.Num)), nil
+		return "T" + strconv.Itoa(t.Num), nil
 	}
-	return nil, fmt.Errorf("invalid type: %T", ty)
+	return "", fmt.Errorf("invalid type: %T", ty)
 }
