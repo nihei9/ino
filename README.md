@@ -49,25 +49,48 @@ data Pen
 
 The following three public APIs are available.
 
-* `Pen` interface
-* `BallpointPen` function (constructor) that returns a `Pen` object
-* `FountainPen` function (constructor) that returns a `Pen` object
+* `type Pen interface`
+* `func BallpointPen(string) Pen`: returns a `BallpointPen` variant of `Pen` type
+* `func FountainPen() Pen`: returns a `FountainPen` variant of `Pen` type
 
 Now, you can check that a value of `Pen` is which variant using `OK` method and can retrieve fields using `Fields` method.
+`Fields` method isn't available in `FountainPen` because it has no fields.
 
 ```go
-bB := BallpointPen("Black")
-ok := bB.Maybe().BallpointPen().OK()            // true
-ok = bB.Maybe().FountainPen().OK()              // false
-color, ok := bB.Maybe().BallpointPen().Fields() // "Black", true
-color, ok = bB.Maybe().FountainPen().Fields()   // "", false
+bpB := BallpointPen("Black")
+ok := bpB.Maybe().BallpointPen().OK()            // true
+ok = bpB.Maybe().FountainPen().OK()              // false
+color, ok := bpB.Maybe().BallpointPen().Fields() // "Black", true
+color, ok = bpB.Maybe().FountainPen().Fields()   // "", false
 
-f := FountainPen()
-ok = f.Maybe().FountainPen().OK()  // true
-ok = f.Maybe().BallpointPen().OK() // false
+fp := FountainPen()
+ok = fp.Maybe().FountainPen().OK()  // true
+ok = fp.Maybe().BallpointPen().OK() // false
 ```
 
-:eyes: `Fields` method isn't available in `FountainPen` because it has no fields.
+The following helpful APIs are also available.
+
+* `func ApplyToBallpointPen[T any](x Pen, f func(string) T) (T, bool)`: when `x` is a `BallpointPen` variant, applies `f` to `x`'s fields and retuns the result and `true`.
+* `func ApplyToFountainPen[T any](x Pen, f func() T) (T, bool)`: when `x` is a `FountainPen` variant, runs `f` and returns the result and `true`
+
+The result type of `ApplyTo*` function is polymorphic, so you can use an arbitrary type for the result type of the callback function `f`.
+
+```go
+color2Num := func(color string) int {
+    switch color {
+    case "Black": return 1
+    default: return 9
+    }
+}
+
+bpB := BallpointPen("Black")
+bpR := BallpointPen("Red")
+fp := FountainPen()
+
+v, ok := ApplyToBallpointPen(bpB, color2Num) // 1, true
+v, ok := ApplyToBallpointPen(bpR, color2Num) // 9, true
+v, ok = ApplyToBallpointPen(fp, color2Num)   // 0, false
+```
 
 #### Example: Generics #1
 
@@ -86,9 +109,9 @@ data Option a
 
 ##### Go APIs generatd
 
-* `Option[T1 any]` interface
-* `None` function that returns a `Option` object
-* `Some[T1 any]` function that returns a `Option` object
+* `type Option[T any] interface`
+* `func None[T any]() Option[T]`: returns a `None` variant of `Option` type
+* `func Some[T any](p1 T1) Option[T]`: returns a `Some` variant of `Option` type
 
 ```go
 s1 := Some(100)           // Option[int]
@@ -99,6 +122,11 @@ num, ok := s1.Maybe().Some().Fields()  // 100, true
 opt, ok := s2.Maybe().Some().Fields()  // Some("Hello"), true
 str, ok := opt.Maybe().Some().Fields() // "Hello", true
 ```
+
+`ApplyTo*` functions are also available.
+
+* `func ApplyToNone[T any, U any](x Option[T], f func() U) (U, bool)`
+* `func ApplyToSome[T any, U any](x Option[T], f func(T) U) (U, bool)`
 
 #### Example: Generics #2
 

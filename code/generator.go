@@ -21,6 +21,9 @@ var (
 
 	//go:embed val_cons_decl.tmpl
 	valConsDeclTmpl string
+
+	//go:embed data_associated.tmpl
+	dataAssociatedTmpl string
 )
 
 type CodeGenerator struct {
@@ -133,7 +136,69 @@ func genDataDecl(dataDecl *ir.DataDecl) ([]ast.Decl, error) {
 		}
 	}
 
+	{
+		tmpl, err := template.New("dataAssociatedTmpl").Parse(dataAssociatedTmpl)
+		if err != nil {
+			return nil, err
+		}
+		for _, valCons := range dataDecl.Conss {
+			paramStrs := make([]string, len(valCons.Params))
+			for i, p := range valCons.Params {
+				s, err := genType(p)
+				if err != nil {
+					return nil, err
+				}
+				paramStrs[i] = s
+			}
+
+			tyVarsStr := genSeq(dataDecl.TypeVarCount, "T", " any", "", "")
+
+			var applyTyVars string
+			if tyVarsStr != "" {
+				applyTyVars = "[" + tyVarsStr + ", U any]"
+			} else {
+				applyTyVars = "[U any]"
+			}
+
+			var b strings.Builder
+			err = tmpl.Execute(&b, map[string]any{
+				"DataName":            dataDecl.Name,
+				"DataTyVars":          genSeq(dataDecl.TypeVarCount, "T", "", "[", "]"),
+				"ApplyTyVars":         applyTyVars,
+				"TagName":             valCons.Name,
+				"ApplyCallbackParams": strings.Join(paramStrs, ","),
+				"HasFields":           len(valCons.Params) > 0,
+				"Fields":              genFields(len(valCons.Params), ""),
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "", b.String(), 0)
+			if err != nil {
+				panic(err)
+			}
+			decls = append(decls, f.Decls...)
+		}
+	}
+
 	return decls, nil
+}
+
+// {prefix}1{suffix}, {prefix}2{suffix}, ..., {prefix}n{suffix}
+func genSeq(n int, prefix, suffix string, l, r string) string {
+	if n == 0 {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprint(&b, l)
+	fmt.Fprintf(&b, "%v1%v", prefix, suffix)
+	for i := 2; i <= n; i++ {
+		fmt.Fprintf(&b, ", %v%v%v", prefix, i, suffix)
+	}
+	fmt.Fprint(&b, r)
+	return b.String()
 }
 
 // [T1, T2, ...]
@@ -179,7 +244,7 @@ func genFieldDecls(tys []ir.Type) (string, error) {
 	return b.String(), nil
 }
 
-// {prefix}p1 {T}, {prefix}p2 {T}, ...
+// {prefix}p1, {prefix}p2, ...
 func genFields(fieldCount int, prefix string) string {
 	if fieldCount == 0 {
 		return ""

@@ -3,6 +3,7 @@ package test
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,38 @@ func TestOption(t *testing.T) {
 	if n.Maybe().Some().OK() || !n.Maybe().None().OK() {
 		t.Error("`n` must be a Some")
 	}
+
+	v, ok := ApplyToSome(ss100, func(f1 Option[int]) string {
+		v, ok := ApplyToSome(s100, func(f1 int) int {
+			return f1 * 2
+		})
+		if !ok {
+			return "!ok"
+		}
+		return strconv.Itoa(v)
+	})
+	if !ok || v != "200" {
+		t.Errorf("unexpected result: %v, %v", v, ok)
+	}
+	_, ok = ApplyToSome(n, func(f1 int) string {
+		return "ok"
+	})
+	if ok {
+		t.Error("`n` must be None, not Some")
+	}
+
+	v, ok = ApplyToNone(n, func() string {
+		return "ok"
+	})
+	if !ok || v != "ok" {
+		t.Errorf("unexpected result: %v, %v", v, ok)
+	}
+	_, ok = ApplyToNone(s100, func() string {
+		return "ok"
+	})
+	if ok {
+		t.Errorf("unexpected result: _, %v", ok)
+	}
 }
 
 func TestList(t *testing.T) {
@@ -36,17 +69,33 @@ func TestList(t *testing.T) {
 	if v := head(l); v != "Hello" {
 		t.Errorf(`want: "Hello", got: %v`, strconv.Quote(v))
 	}
-	l = tail(l)
-	if v := head(l); v != "world" {
+	tl := tail(l)
+	if v := head(tl); v != "world" {
 		t.Errorf(`want: "world", got: %v`, strconv.Quote(v))
 	}
-	l = tail(l)
-	if v := head(l); v != "!" {
+	tl = tail(tl)
+	if v := head(tl); v != "!" {
 		t.Errorf(`want: "!", got: %v`, strconv.Quote(v))
 	}
-	l = tail(l)
-	if !l.Maybe().Nil().OK() {
+	tl = tail(tl)
+	if !tl.Maybe().Nil().OK() {
 		t.Error("list is not Nil")
+	}
+
+	v, ok := ApplyToCons(l, func(h string, tl List[string]) string {
+		v, _ := ApplyToCons(tl, func(h string, tl List[string]) string {
+			v, _ := ApplyToCons(tl, func(h string, tl List[string]) string {
+				v, _ := ApplyToNil(tl, func() string {
+					return "🐱"
+				})
+				return strings.Repeat(h, 4) + " " + v
+			})
+			return strings.ToUpper(h) + " " + v
+		})
+		return strings.ToUpper(h) + " " + v
+	})
+	if !ok || v != "HELLO WORLD !!!! 🐱" {
+		t.Errorf("unexpected result: %v, %v", v, ok)
 	}
 }
 

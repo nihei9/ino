@@ -1,0 +1,16 @@
+package template
+
+func ApplyTo{{ .TagName }}{{ .ApplyTyVars }}(x {{ .DataName }}{{ .DataTyVars }}, f func({{ .ApplyCallbackParams }}) U) (result U, ok bool) {
+{{ if .HasFields }}
+	{{ .Fields }}, ok := x.Maybe().{{ .TagName }}().Fields()
+	if !ok {
+		return
+	}
+	return f({{ .Fields }}), true
+{{ else }}
+	if !x.Maybe().{{ .TagName }}().OK() {
+		return
+	}
+	return f(), true
+{{ end }}
+}
