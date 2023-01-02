@@ -37,4 +37,23 @@ func TestColor(t *testing.T) {
 	if !b.Maybe().Blue().OK() {
 		t.Error("b must be Blue")
 	}
+
+	cases, err := NewColorCaseSet(
+		CaseRed(Red(), func() string {
+			return "#ff0000"
+		}),
+		CaseGreen(Green(), func() string {
+			return "#00ff00"
+		}),
+		CaseBlue(Blue(), func() string {
+			return "#0000ff"
+		}),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := cases.Match(r)
+	if err != nil || result != "#ff0000" {
+		t.Errorf("unexpected matching result: %v, %v", result, err)
+	}
 }

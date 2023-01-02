@@ -1,9 +1,65 @@
 package template
 
+var {{ .TagNumToNameMapName }} = []string {
+{{ range .TagNames -}}
+	"{{ . -}}",
+{{ end -}}
+}
+
 type {{ .DataName }}{{ .TyVarsWithType }} interface {
+	Eqer
 	Maybe() *{{ .MatcherStructName }}{{ .TyVars }}
+	tag() string
+	tagNum() int
 }
 
 type {{ .MatcherStructName }}{{ .TyVarsWithType }} struct {
 	x {{ .DataName }}{{ .TyVars }}
+}
+
+type {{ .CaseStructName }}{{ .CaseTyVars }} struct {
+	match  func({{ .DataName }}{{ .TyVars }}) (U, bool)
+	tagNum int
+	err    error
+}
+
+type {{ .DataName }}CaseSet{{ .CaseTyVars }} struct {
+	cases []*{{ .CaseStructName }}{{ .CaseTyNames }}
+}
+
+func New{{ .DataName }}CaseSet{{ .CaseTyVars }}(cases ...*{{ .CaseStructName }}{{ .CaseTyNames }}) (*{{ .DataName }}CaseSet{{ .CaseTyNames }}, error) {
+	checked := [{{ .TagCount }}+1]bool{}
+	for _, c := range cases {
+		if c.err != nil {
+			return nil, c.err
+		}
+		checked[c.tagNum] = true
+	}
+	missingTags := make([]string, 0, {{ .TagCount }})
+	for tagNum, ok := range checked[1:] {
+		if !ok {
+			missingTags = append(missingTags, {{ .TagNumToNameMapName }}[tagNum])
+		}
+	}
+	if len(missingTags) > 0 {
+		var b strings.Builder
+		fmt.Fprintf(&b, missingTags[0])
+		for _, t := range missingTags[1:] {
+			fmt.Fprintf(&b, ", %v", t)
+		}
+		return nil, fmt.Errorf("non-exhaustive patterns: missing tags: %v", b.String())
+	}
+	return &{{ .DataName }}CaseSet{{ .CaseTyNames }}{
+		cases: cases,
+	}, nil
+}
+
+func (s *{{ .DataName }}CaseSet{{ .CaseTyNames }}) Match(x {{ .DataName }}{{ .TyVars}}) (U, error) {
+	for _, c := range s.cases {
+		if result, ok := c.match(x); ok {
+			return result, nil
+		}
+	}
+	var zero U
+	return zero, fmt.Errorf("non-exhaustive patterns")
 }

@@ -14,3 +14,21 @@ func ApplyTo{{ .TagName }}{{ .ApplyTyVars }}(x {{ .DataName }}{{ .DataTyVars }},
 	return f(), true
 {{ end }}
 }
+
+func Case{{ .TagName }}{{ .ApplyTyVars }}(y {{ .DataName }}{{ .DataTyVars }}, f func({{ .ApplyCallbackParams }}) U) *{{ .CaseStructName }}{{ .ApplyTyNames }} {
+	var err error
+	if ok := y.Maybe().{{ .TagName }}().OK(); !ok {
+		err = fmt.Errorf("condition must be {{ .TagName }} but given %v", y.tag())
+	}
+	return &{{ .CaseStructName }}{{ .ApplyTyNames }}{
+		match: func(x {{ .DataName }}{{ .DataTyVars }}) (U, bool) {
+			if x.Eq(y) {
+				return ApplyTo{{ .TagName }}(x, f)
+			}
+			var zero U
+			return zero, false
+		},
+		tagNum: y.tagNum(),
+		err: err,
+	}
+}

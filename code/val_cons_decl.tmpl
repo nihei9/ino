@@ -10,8 +10,28 @@ func {{ .TagName }}{{ .TyVarsWithType }}({{ .Params }}) {{ .DataName }}{{ .TyVar
 	}
 }
 
+func (x *{{ .TagStructName }}{{ .TyVars }}) Eq(y Eqer) bool {
+{{ if .HasFields }}
+	if z, ok := y.(*{{ .TagStructName }}{{ .TyVars }}); ok {
+		return {{ .FieldsEqExpr }}
+	}
+	return false
+{{ else }}
+	_, ok := y.(*{{ .TagStructName }}{{ .TyVars }})
+	return ok
+{{ end }}
+}
+
 func (x *{{ .TagStructName }}{{ .TyVars }}) Maybe() *{{ .MatcherStructName }}{{ .TyVars }} {
 	return &{{ .MatcherStructName }}{{ .TyVars }}{x: x}
+}
+
+func (x *{{ .TagStructName }}{{ .TyVars }}) tag() string {
+	return "{{ .TagName }}"
+}
+
+func (x *{{ .TagStructName }}{{ .TyVars }}) tagNum() int {
+	return {{ .TagNum }}
 }
 
 func (x *{{ .MatcherStructName }}{{ .TyVars }}) {{ .TagName }}() *{{ .MaybeTagStructName }}{{ .TyVars }} {

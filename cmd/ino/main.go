@@ -38,9 +38,13 @@ func run() int {
 	}
 
 	for _, f := range files {
-		err := compile(f)
+		wg, err := os.Getwd()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
+		}
+		err = compile(f, wg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			return 1
 		}
 	}
@@ -56,8 +60,8 @@ func findInoFiles() ([]string, error) {
 	return filepath.Glob(filepath.Join(wd, "*.ino"))
 }
 
-func compile(filePath string) error {
-	f, err := os.Open(filePath)
+func compile(srcPath string, outDir string) error {
+	f, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
@@ -90,15 +94,12 @@ func compile(filePath string) error {
 		return err
 	}
 
-	outFilePath := strings.TrimSuffix(filePath, ".ino") + ".go"
-	out, err := os.OpenFile(outFilePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
+	srcFileName := filepath.Base(srcPath)
+	outFileName := strings.TrimSuffix(srcFileName, ".ino") + ".go"
 	g := code.CodeGenerator{
-		PkgName: flags.packageName,
-		Out:     out,
+		PkgName:     flags.packageName,
+		OutDir:      outDir,
+		OutFileName: outFileName,
 	}
 	err = g.Run(a.IR)
 	if err != nil {

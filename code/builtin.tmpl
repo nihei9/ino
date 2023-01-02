@@ -1,0 +1,45 @@
+package template
+
+type Eqer interface {
+	Eq(Eqer) bool
+}
+
+type Bool bool
+type Uint8 uint8
+type Uint16 uint16
+type Uint32 uint32
+type Uint64 uint64
+type Int8 int8
+type Int16 int16
+type Int32 int32
+type Int64 int64
+type Float32 float32
+type Float64 float64
+type Complex64 complex64
+type Complex128 complex128
+type String string
+type Int int
+type Uint uint
+type Uintptr uintptr
+type Byte byte
+type Rune rune
+
+func (x Bool) Eq(y Eqer) bool { return x == y }
+func (x Uint8) Eq(y Eqer) bool { return x == y }
+func (x Uint16) Eq(y Eqer) bool { return x == y }
+func (x Uint32) Eq(y Eqer) bool { return x == y }
+func (x Uint64) Eq(y Eqer) bool { return x == y }
+func (x Int8) Eq(y Eqer) bool { return x == y }
+func (x Int16) Eq(y Eqer) bool { return x == y }
+func (x Int32) Eq(y Eqer) bool { return x == y }
+func (x Int64) Eq(y Eqer) bool { return x == y }
+func (x Float32) Eq(y Eqer) bool { return x == y }
+func (x Float64) Eq(y Eqer) bool { return x == y }
+func (x Complex64) Eq(y Eqer) bool { return x == y }
+func (x Complex128) Eq(y Eqer) bool { return x == y }
+func (x String) Eq(y Eqer) bool { return x == y }
+func (x Int) Eq(y Eqer) bool { return x == y }
+func (x Uint) Eq(y Eqer) bool { return x == y }
+func (x Uintptr) Eq(y Eqer) bool { return x == y }
+func (x Byte) Eq(y Eqer) bool { return x == y }
+func (x Rune) Eq(y Eqer) bool { return x == y }

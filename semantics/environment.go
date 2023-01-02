@@ -60,8 +60,8 @@ func (t basicType) equals(u declType) bool {
 }
 
 const (
-	tyInt    basicType = "int"
-	tyString basicType = "string"
+	tyInt    basicType = "Int"
+	tyString basicType = "String"
 )
 
 type funcType struct {
@@ -482,8 +482,8 @@ func (b *environmentBuilder) run(root *parser.Node) (retErr error) {
 }
 
 func (b *environmentBuilder) buildIn() {
-	b.tyEnv.bind("int", tyInt)
-	b.tyEnv.bind("string", tyString)
+	b.tyEnv.bind("Int", tyInt)
+	b.tyEnv.bind("String", tyString)
 }
 
 func (b *environmentBuilder) enter() (*tyEnv, *valEnv) {

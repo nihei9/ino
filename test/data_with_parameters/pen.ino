@@ -1,6 +1,6 @@
 data Pen
-    = BallpointPen int Color
-    | Fountain
+    = BallpointPen Int Color
+    | FountainPen
     ;
 
 data Color
