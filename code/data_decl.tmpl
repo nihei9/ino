@@ -18,9 +18,10 @@ type {{ .MatcherStructName }}{{ .TyVarsWithType }} struct {
 }
 
 type {{ .CaseStructName }}{{ .CaseTyVars }} struct {
-	match  func({{ .DataName }}{{ .TyVars }}) (U, bool)
-	tagNum int
-	err    error
+	match     func({{ .DataName }}{{ .TyVars }}) (U, bool)
+	tagNum    int
+	isDefault bool
+	err       error
 }
 
 type {{ .DataName }}CaseSet{{ .CaseTyVars }} struct {
@@ -29,11 +30,20 @@ type {{ .DataName }}CaseSet{{ .CaseTyVars }} struct {
 
 func New{{ .DataName }}CaseSet{{ .CaseTyVars }}(cases ...*{{ .CaseStructName }}{{ .CaseTyNames }}) (*{{ .DataName }}CaseSet{{ .CaseTyNames }}, error) {
 	checked := [{{ .TagCount }}+1]bool{}
-	for _, c := range cases {
+	var hasDefault bool
+	var firstDefaultPos int
+	for i, c := range cases {
 		if c.err != nil {
 			return nil, c.err
 		}
 		checked[c.tagNum] = true
+		if c.isDefault && !hasDefault {
+			hasDefault = true
+			firstDefaultPos = i
+		}
+	}
+	if hasDefault && len(cases) > 1 && firstDefaultPos != len(cases) - 1 {
+		return nil, fmt.Errorf("case #%v and subsequent cases are unreachable: only one default case can be placed the end", firstDefaultPos+2)
 	}
 	missingTags := make([]string, 0, {{ .TagCount }})
 	for tagNum, ok := range checked[1:] {
@@ -41,7 +51,7 @@ func New{{ .DataName }}CaseSet{{ .CaseTyVars }}(cases ...*{{ .CaseStructName }}{
 			missingTags = append(missingTags, {{ .TagNumToNameMapName }}[tagNum])
 		}
 	}
-	if len(missingTags) > 0 {
+	if len(missingTags) > 0 && !hasDefault {
 		var b strings.Builder
 		fmt.Fprintf(&b, missingTags[0])
 		for _, t := range missingTags[1:] {
@@ -62,4 +72,13 @@ func (s *{{ .DataName }}CaseSet{{ .CaseTyNames }}) Match(x {{ .DataName }}{{ .Ty
 	}
 	var zero U
 	return zero, fmt.Errorf("non-exhaustive patterns")
+}
+
+func Case{{ .DataName}}Default{{ .CaseTyVars }}(f func({{ .DataName }}{{ .TyVars }}) U) *{{ .CaseStructName }}{{ .CaseTyNames }} {
+	return &{{ .CaseStructName }}{{ .CaseTyNames }}{
+		match: func(x {{ .DataName }}{{ .TyVars }}) (U, bool) {
+			return f(x), true
+		},
+		isDefault: true,
+	}
 }

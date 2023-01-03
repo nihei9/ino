@@ -38,22 +38,96 @@ func TestColor(t *testing.T) {
 		t.Error("b must be Blue")
 	}
 
-	cases, err := NewColorCaseSet(
-		CaseRed(Red(), func() string {
-			return "#ff0000"
-		}),
-		CaseGreen(Green(), func() string {
-			return "#00ff00"
-		}),
-		CaseBlue(Blue(), func() string {
-			return "#0000ff"
-		}),
-	)
-	if err != nil {
-		t.Fatal(err)
+	{
+		cases, err := NewColorCaseSet(
+			CaseRed(Red(), func() string {
+				return "#ff0000"
+			}),
+			CaseGreen(Green(), func() string {
+				return "#00ff00"
+			}),
+			CaseBlue(Blue(), func() string {
+				return "#0000ff"
+			}),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, err := cases.Match(r)
+		if err != nil || result != "#ff0000" {
+			t.Errorf("unexpected matching result: %v, %v", result, err)
+		}
 	}
-	result, err := cases.Match(r)
-	if err != nil || result != "#ff0000" {
-		t.Errorf("unexpected matching result: %v, %v", result, err)
+
+	{
+		cases, err := NewColorCaseSet(
+			CaseRed(Red(), func() string {
+				return "apple"
+			}),
+			CaseGreen(Green(), func() string {
+				return "green apple"
+			}),
+			CaseColorDefault(func(c Color) string {
+				return "?"
+			}),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		apple, err := cases.Match(Red())
+		if err != nil || apple != "apple" {
+			t.Errorf("unexpected matching result: %v, %v", apple, err)
+		}
+		apple, err = cases.Match(Green())
+		if err != nil || apple != "green apple" {
+			t.Errorf("unexpected matching result: %v, %v", apple, err)
+		}
+		apple, err = cases.Match(Blue())
+		if err != nil || apple != "?" {
+			t.Errorf("unexpected matching result: %v, %v", apple, err)
+		}
+	}
+
+	{
+		cases, err := NewColorCaseSet(
+			CaseColorDefault(func(c Color) string {
+				return "?"
+			}),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		apple, err := cases.Match(Red())
+		if err != nil || apple != "?" {
+			t.Errorf("unexpected matching result: %v, %v", apple, err)
+		}
+	}
+
+	{
+		cases, err := NewColorCaseSet(
+			CaseColorDefault(func(c Color) string {
+				return "?"
+			}),
+			CaseRed(Red(), func() string {
+				return "apple"
+			}),
+		)
+		if err == nil || cases != nil {
+			t.Error("error must occure")
+		}
+	}
+
+	{
+		cases, err := NewColorCaseSet(
+			CaseColorDefault(func(c Color) string {
+				return "?"
+			}),
+			CaseColorDefault(func(c Color) string {
+				return "?"
+			}),
+		)
+		if err == nil || cases != nil {
+			t.Error("error must occure")
+		}
 	}
 }
