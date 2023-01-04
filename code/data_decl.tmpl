@@ -1,21 +1,108 @@
-package template
-
 var {{ .TagNumToNameMapName }} = []string {
-{{ range .TagNames -}}
-	"{{ . -}}",
-{{ end -}}
+{{- range .TagNames }}
+	"{{ . }}",
+{{- end }}
 }
 
 type {{ .DataName }}{{ .TyVarsWithType }} interface {
 	Eqer
-	Maybe() *{{ .MatcherStructName }}{{ .TyVars }}
-	tag() string
+	Maybe()  *{{ .MatcherStructName }}{{ .TyVars }}
+	tag()    string
 	tagNum() int
 }
+
+{{ range .ValConss }}
+type {{ .TagStructName }}{{ $.TyVarsWithType }} struct {
+{{- range (.Fields) }}
+	{{ . }}
+{{- end }}
+}
+
+func {{ .TagName }}{{ $.TyVarsWithType }}({{ .Params }}) {{ $.DataName }}{{ $.TyVars }} {
+	return &{{ .TagStructName }}{{ $.TyVars }}{
+	{{- range (.KeyValuePairs) }}
+		{{ . }}
+	{{- end }}
+	}
+}
+
+func (x *{{ .TagStructName }}{{ $.TyVars }}) Eq(y Eqer) bool {
+{{- if .HasFields }}
+	if z, ok := y.(*{{ .TagStructName }}{{ $.TyVars }}); ok {
+		return {{ .FieldsEqExpr }}
+	}
+	return false
+{{- else }}
+	_, ok := y.(*{{ .TagStructName }}{{ $.TyVars }})
+	return ok
+{{- end }}
+}
+
+func (x *{{ .TagStructName }}{{ $.TyVars }}) Maybe() *{{ $.MatcherStructName }}{{ $.TyVars }} {
+	return &{{ $.MatcherStructName }}{{ $.TyVars }}{
+		x: x,
+	}
+}
+
+func (x *{{ .TagStructName }}{{ $.TyVars }}) tag() string {
+	return "{{ .TagName }}"
+}
+
+func (x *{{ .TagStructName }}{{ $.TyVars }}) tagNum() int {
+	return {{ .TagNum }}
+}
+{{ end }}
 
 type {{ .MatcherStructName }}{{ .TyVarsWithType }} struct {
 	x {{ .DataName }}{{ .TyVars }}
 }
+
+{{ range .ValConss }}
+func (x *{{ $.MatcherStructName }}{{ $.TyVars }}) {{ .TagName }}() *{{ .MaybeTagStructName }}{{ $.TyVars }} {
+	if y, ok := x.x.(*{{ .TagStructName }}{{ $.TyVars }}); ok {
+		return &{{ .MaybeTagStructName }}{{ $.TyVars }}{
+			x: y,
+		}
+	}
+	return &{{ .MaybeTagStructName }}{{ $.TyVars }}{}
+}
+{{ end }}
+
+{{ range .ValConss }}
+type {{ .MaybeTagStructName }}{{ $.TyVarsWithType }} struct {
+	x *{{ .TagStructName }}{{ $.TyVars }}
+}
+
+func (x *{{ .MaybeTagStructName }}{{ $.TyVars }}) OK() bool {
+	return x.x != nil
+}
+
+{{- if .HasFields }}
+func (x *{{ .MaybeTagStructName }}{{ $.TyVars }}) Fields() ({{ .Params }}, ok bool) {
+	if !x.OK() {
+		return
+	}
+	return {{ .FieldsMethodReturn }}, true
+}
+{{- end }}
+{{ end }}
+
+{{ range .ValConss}}
+func {{ .ApplyToFuncName }}{{ .ApplyTyVars }}(x {{ $.DataName }}{{ $.DataTyVars }}, f func({{ .ApplyCallbackParams }}) U) (result U, ok bool) {
+{{- if .HasFields }}
+	{{ .FieldSeq }}, ok := x.Maybe().{{ .TagName }}().Fields()
+	if !ok {
+		return
+	}
+	return f({{ .FieldSeq }}), true
+{{- else }}
+	if !x.Maybe().{{ .TagName }}().OK() {
+		return
+	}
+	return f(), true
+{{- end }}
+}
+{{ end }}
 
 type {{ .CaseStructName }}{{ .CaseTyVars }} struct {
 	match     func({{ .DataName }}{{ .TyVars }}) (U, bool)
@@ -24,11 +111,11 @@ type {{ .CaseStructName }}{{ .CaseTyVars }} struct {
 	err       error
 }
 
-type {{ .DataName }}CaseSet{{ .CaseTyVars }} struct {
+type {{ .CaseSetStructName }}{{ .CaseTyVars }} struct {
 	cases []*{{ .CaseStructName }}{{ .CaseTyNames }}
 }
 
-func New{{ .DataName }}CaseSet{{ .CaseTyVars }}(cases ...*{{ .CaseStructName }}{{ .CaseTyNames }}) (*{{ .DataName }}CaseSet{{ .CaseTyNames }}, error) {
+func {{ .NewCaseSetFuncName }}{{ .CaseTyVars }}(cases ...*{{ .CaseStructName }}{{ .CaseTyNames }}) (*{{ .CaseSetStructName }}{{ .CaseTyNames }}, error) {
 	checked := [{{ .TagCount }}+1]bool{}
 	var hasDefault bool
 	var firstDefaultPos int
@@ -59,12 +146,12 @@ func New{{ .DataName }}CaseSet{{ .CaseTyVars }}(cases ...*{{ .CaseStructName }}{
 		}
 		return nil, fmt.Errorf("non-exhaustive patterns: missing tags: %v", b.String())
 	}
-	return &{{ .DataName }}CaseSet{{ .CaseTyNames }}{
+	return &{{ .CaseSetStructName }}{{ .CaseTyNames }}{
 		cases: cases,
 	}, nil
 }
 
-func (s *{{ .DataName }}CaseSet{{ .CaseTyNames }}) Match(x {{ .DataName }}{{ .TyVars}}) (U, error) {
+func (s *{{ .CaseSetStructName }}{{ .CaseTyNames }}) Match(x {{ .DataName }}{{ .TyVars}}) (U, error) {
 	for _, c := range s.cases {
 		if result, ok := c.match(x); ok {
 			return result, nil
@@ -74,7 +161,7 @@ func (s *{{ .DataName }}CaseSet{{ .CaseTyNames }}) Match(x {{ .DataName }}{{ .Ty
 	return zero, fmt.Errorf("non-exhaustive patterns")
 }
 
-func Case{{ .DataName}}Default{{ .CaseTyVars }}(f func({{ .DataName }}{{ .TyVars }}) U) *{{ .CaseStructName }}{{ .CaseTyNames }} {
+func {{ .DefaultCaseFuncName }}{{ .CaseTyVars }}(f func({{ .DataName }}{{ .TyVars }}) U) *{{ .CaseStructName }}{{ .CaseTyNames }} {
 	return &{{ .CaseStructName }}{{ .CaseTyNames }}{
 		match: func(x {{ .DataName }}{{ .TyVars }}) (U, bool) {
 			return f(x), true
@@ -82,3 +169,23 @@ func Case{{ .DataName}}Default{{ .CaseTyVars }}(f func({{ .DataName }}{{ .TyVars
 		isDefault: true,
 	}
 }
+
+{{ range .ValConss }}
+func {{ .CaseFuncName }}{{ .ApplyTyVars }}(y {{ $.DataName }}{{ $.DataTyVars }}, f func({{ .ApplyCallbackParams }}) U) *{{ $.CaseStructName }}{{ .ApplyTyNames }} {
+	var err error
+	if ok := y.Maybe().{{ .TagName }}().OK(); !ok {
+		err = fmt.Errorf("condition must be {{ .TagName }} but given %v", y.tag())
+	}
+	return &{{ $.CaseStructName }}{{ .ApplyTyNames }}{
+		match: func(x {{ $.DataName }}{{ $.DataTyVars }}) (U, bool) {
+			if x.Eq(y) {
+				return ApplyTo{{ .TagName }}(x, f)
+			}
+			var zero U
+			return zero, false
+		},
+		tagNum: y.tagNum(),
+		err: err,
+	}
+}
+{{ end }}
