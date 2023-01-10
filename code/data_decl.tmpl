@@ -12,43 +12,43 @@ type {{ .DataName }}{{ .TyVarsWithType }} interface {
 }
 
 {{ range .ValConss }}
-type {{ .TagStructName }}{{ $.TyVarsWithType }} struct {
+type {{ .TagStructNameWithTyParams }} struct {
 {{- range (.Fields) }}
 	{{ . }}
 {{- end }}
 }
 
-func {{ .TagName }}{{ $.TyVarsWithType }}({{ .Params }}) {{ $.DataName }}{{ $.TyVars }} {
-	return &{{ .TagStructName }}{{ $.TyVars }}{
+func {{ .ConsFuncInstantiated }}({{ .Params }}) {{ $.DataName }}{{ $.TyVars }} {
+	return &{{ .TagStructInstantiated }}{
 	{{- range (.KeyValuePairs) }}
 		{{ . }}
 	{{- end }}
 	}
 }
 
-func (x *{{ .TagStructName }}{{ $.TyVars }}) Eq(y Eqer) bool {
+func (x *{{ .TagStructInstantiated }}) Eq(y Eqer) bool {
 {{- if .HasFields }}
-	if z, ok := y.(*{{ .TagStructName }}{{ $.TyVars }}); ok {
+	if z, ok := y.(*{{ .TagStructInstantiated }}); ok {
 		return {{ .FieldsEqExpr }}
 	}
 	return false
 {{- else }}
-	_, ok := y.(*{{ .TagStructName }}{{ $.TyVars }})
+	_, ok := y.(*{{ .TagStructInstantiated }})
 	return ok
 {{- end }}
 }
 
-func (x *{{ .TagStructName }}{{ $.TyVars }}) Maybe() *{{ $.MatcherStructName }}{{ $.TyVars }} {
+func (x *{{ .TagStructInstantiated }}) Maybe() *{{ $.MatcherStructName }}{{ $.TyVars }} {
 	return &{{ $.MatcherStructName }}{{ $.TyVars }}{
 		x: x,
 	}
 }
 
-func (x *{{ .TagStructName }}{{ $.TyVars }}) tag() string {
+func (x *{{ .TagStructInstantiated }}) tag() string {
 	return "{{ .TagName }}"
 }
 
-func (x *{{ .TagStructName }}{{ $.TyVars }}) tagNum() int {
+func (x *{{ .TagStructInstantiated }}) tagNum() int {
 	return {{ .TagNum }}
 }
 {{ end }}
@@ -58,27 +58,27 @@ type {{ .MatcherStructName }}{{ .TyVarsWithType }} struct {
 }
 
 {{ range .ValConss }}
-func (x *{{ $.MatcherStructName }}{{ $.TyVars }}) {{ .TagName }}() *{{ .MaybeTagStructName }}{{ $.TyVars }} {
-	if y, ok := x.x.(*{{ .TagStructName }}{{ $.TyVars }}); ok {
-		return &{{ .MaybeTagStructName }}{{ $.TyVars }}{
+func (x *{{ $.MatcherStructName }}{{ $.TyVars }}) {{ .TagName }}() *{{ .MaybeTagStructInstantiated }} {
+	if y, ok := x.x.(*{{ .TagStructInstantiated }}); ok {
+		return &{{ .MaybeTagStructInstantiated }}{
 			x: y,
 		}
 	}
-	return &{{ .MaybeTagStructName }}{{ $.TyVars }}{}
+	return &{{ .MaybeTagStructInstantiated }}{}
 }
 {{ end }}
 
 {{ range .ValConss }}
-type {{ .MaybeTagStructName }}{{ $.TyVarsWithType }} struct {
-	x *{{ .TagStructName }}{{ $.TyVars }}
+type {{ .MaybeTagStructNameWithTyParams }} struct {
+	x *{{ .TagStructInstantiated }}
 }
 
-func (x *{{ .MaybeTagStructName }}{{ $.TyVars }}) OK() bool {
+func (x *{{ .MaybeTagStructInstantiated }}) OK() bool {
 	return x.x != nil
 }
 
 {{- if .HasFields }}
-func (x *{{ .MaybeTagStructName }}{{ $.TyVars }}) Fields() ({{ .Params }}, ok bool) {
+func (x *{{ .MaybeTagStructInstantiated }}) Fields() ({{ .Params }}, ok bool) {
 	if !x.OK() {
 		return
 	}

@@ -118,9 +118,13 @@ func genDataDecl(w io.Writer, dataDecl *ir.DataDecl) error {
 }
 
 func genDataMap(dataDecl *ir.DataDecl) (map[string]any, error) {
+	tyParams := genTyVarWithType(dataDecl.TypeVarCount, "Eqer")
+	tyArgs := genTyVars(dataDecl.TypeVarCount)
 	valConss := make([]map[string]any, len(dataDecl.Conss))
 	for i, cons := range dataDecl.Conss {
 		tagNum := i + 1
+		tagStructName := "tag_" + dataDecl.Name + "_" + cons.Name
+		maybeTagStructName := "maybeTag_" + dataDecl.Name + "_" + cons.Name
 		fields := make([]string, len(cons.Params))
 		for i, p := range cons.Params {
 			ty, err := genType(p)
@@ -173,22 +177,25 @@ func genDataMap(dataDecl *ir.DataDecl) (map[string]any, error) {
 			}
 		}
 		valConss[i] = map[string]any{
-			"TagName":             cons.Name,
-			"TagNum":              tagNum,
-			"TagStructName":       "tag_" + dataDecl.Name + "_" + cons.Name,
-			"MaybeTagStructName":  "maybeTag_" + dataDecl.Name + "_" + cons.Name,
-			"HasFields":           len(cons.Params) > 0,
-			"Fields":              fields,
-			"FieldsEqExpr":        fieldsEqExpr,
-			"FieldsMethodReturn":  genFields(len(cons.Params), "x.x."),
-			"FieldSeq":            genFields(len(cons.Params), ""),
-			"Params":              params,
-			"KeyValuePairs":       keyValuePairs,
-			"ApplyToFuncName":     "ApplyTo" + cons.Name,
-			"ApplyTyVars":         applyTyVars,
-			"ApplyTyNames":        applyTyNames,
-			"ApplyCallbackParams": strings.Join(paramStrs, ","),
-			"CaseFuncName":        "Case" + cons.Name,
+			"TagName":                        cons.Name,
+			"TagNum":                         tagNum,
+			"ConsFuncInstantiated":           cons.Name + tyParams,
+			"TagStructNameWithTyParams":      tagStructName + tyParams,
+			"TagStructInstantiated":          tagStructName + tyArgs,
+			"MaybeTagStructNameWithTyParams": maybeTagStructName + tyParams,
+			"MaybeTagStructInstantiated":     maybeTagStructName + tyArgs,
+			"HasFields":                      len(cons.Params) > 0,
+			"Fields":                         fields,
+			"FieldsEqExpr":                   fieldsEqExpr,
+			"FieldsMethodReturn":             genFields(len(cons.Params), "x.x."),
+			"FieldSeq":                       genFields(len(cons.Params), ""),
+			"Params":                         params,
+			"KeyValuePairs":                  keyValuePairs,
+			"ApplyToFuncName":                "ApplyTo" + cons.Name,
+			"ApplyTyVars":                    applyTyVars,
+			"ApplyTyNames":                   applyTyNames,
+			"ApplyCallbackParams":            strings.Join(paramStrs, ","),
+			"CaseFuncName":                   "Case" + cons.Name,
 		}
 	}
 	tagNames := make([]string, len(dataDecl.Conss)+1)
@@ -213,8 +220,8 @@ func genDataMap(dataDecl *ir.DataDecl) (map[string]any, error) {
 
 	return map[string]any{
 		"DataName":            dataDecl.Name,
-		"TyVarsWithType":      genTyVarWithType(dataDecl.TypeVarCount, "Eqer"),
-		"TyVars":              genTyVars(dataDecl.TypeVarCount),
+		"TyVarsWithType":      tyParams,
+		"TyVars":              tyArgs,
 		"DataTyVars":          genSeq(dataDecl.TypeVarCount, "T", "", "[", "]"),
 		"MatcherStructName":   "matcher_" + dataDecl.Name,
 		"TagCount":            len(dataDecl.Conss),
